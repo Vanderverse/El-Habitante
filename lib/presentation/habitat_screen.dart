@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../application/habitat_controller.dart';
 import '../data/habitat_repository.dart';
+import '../domain/behavior_engine.dart';
 import '../domain/habitant.dart';
 import 'room_view.dart';
 
@@ -110,8 +111,8 @@ class _HabitatScreenState extends State<HabitatScreen>
               const SizedBox(height: 18),
               RoomView(
                 state: state,
-                onCreatureTap: () => controller.interact(Interaction.greet),
-                onMarkTap: () => controller.interact(Interaction.examineMark),
+                onCreatureTap: () => _interact(Interaction.greet),
+                onMarkTap: () => _interact(Interaction.examineMark),
               ),
               const SizedBox(height: 18),
               Semantics(
@@ -133,17 +134,17 @@ class _HabitatScreenState extends State<HabitatScreen>
                 alignment: WrapAlignment.center,
                 children: [
                   FilledButton.tonalIcon(
-                    onPressed: () => controller.interact(Interaction.greet),
+                    onPressed: () => _interact(Interaction.greet),
                     icon: const Icon(Icons.waving_hand_outlined),
                     label: const Text('Saludar'),
                   ),
                   FilledButton.tonalIcon(
-                    onPressed: () => controller.interact(Interaction.offerObject),
+                    onPressed: () => _interact(Interaction.offerObject),
                     icon: const Icon(Icons.landscape_outlined),
                     label: const Text('Dejar una piedra'),
                   ),
                   FilledButton.tonalIcon(
-                    onPressed: () => controller.interact(Interaction.giveSpace),
+                    onPressed: () => _interact(Interaction.giveSpace),
                     icon: const Icon(Icons.nightlight_outlined),
                     label: const Text('Darle espacio'),
                   ),
@@ -158,7 +159,7 @@ class _HabitatScreenState extends State<HabitatScreen>
               if (state.mystery == MysteryStage.appeared) ...[
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
-                  onPressed: () => controller.interact(Interaction.examineMark),
+                  onPressed: () => _interact(Interaction.examineMark),
                   icon: const Icon(Icons.search),
                   label: const Text('Examinar la marca de la pared'),
                 ),
@@ -177,6 +178,43 @@ class _HabitatScreenState extends State<HabitatScreen>
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _interact(Interaction action) {
+    final state = controller.state;
+    if (state == null || controller.loading) return;
+    final last = state.lastInteractionAt;
+    if (last != null) {
+      final remaining = BehaviorEngine.interactionCooldown -
+          DateTime.now().toUtc().difference(last);
+      if (remaining > Duration.zero) {
+        _showInteractionFeedback(
+          'Dale un instante para responder antes del próximo gesto.',
+        );
+        return;
+      }
+    }
+
+    // Los botones reaccionan a un toque breve, no requieren pulsación larga.
+    unawaited(controller.interact(action));
+    _showInteractionFeedback(switch (action) {
+      Interaction.greet => 'Te acercaste a saludarlo.',
+      Interaction.offerObject => 'Dejaste una piedra en su habitación.',
+      Interaction.giveSpace => 'Le diste espacio para estar a su manera.',
+      Interaction.examineMark => 'Examinaste la marca misteriosa.',
+    });
+  }
+
+  void _showInteractionFeedback(String text) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(text),
+        duration: const Duration(milliseconds: 1300),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
