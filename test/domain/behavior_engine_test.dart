@@ -157,6 +157,19 @@ void main() {
     expect(engine.dialogue(state), contains('varias veces'));
   });
 
+  test('recuerda la afirmación de encierro sin tomarla como verdad', () {
+    final initial = Habitant.discover(start);
+    final next = engine.converse(
+        initial, 'Fui yo quien te encerró acá', start);
+    expect(next.memories.last.text,
+        'El visitante afirmó haber encerrado al Habitante. No hay pruebas.');
+    expect(next.personality.trust, lessThan(initial.personality.trust));
+    final saved = jsonEncode(next.toJson());
+    expect(saved, isNot(contains('Fui yo quien')));
+    expect(Habitant.fromJson(jsonDecode(saved) as Map<String, dynamic>)
+        .memories.last.text, contains('afirmó'));
+  });
+
   test('los guardados de 0.1 se abren sin perder personalidad ni recuerdos', () {
     final old = Habitant.discover(start).toJson()
       ..remove('interests')
