@@ -1,7 +1,7 @@
 name: el_habitante
 description: Una pequeña experiencia de vida artificial, privada y local.
 publish_to: none
-version: 0.2.0+2
+version: 0.3.0+3
 
 environment:
   sdk: '>=3.8.0 <4.0.0'
@@ -10,6 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
   path_provider: ^2.1.5
+  crypto: ^3.0.6
+  llama_flutter_android: 0.2.6
 
 dev_dependencies:
   flutter_test:
