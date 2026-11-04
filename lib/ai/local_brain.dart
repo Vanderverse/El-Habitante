@@ -21,8 +21,13 @@ class LocalBrain extends ChangeNotifier {
   bool get isActive => status == BrainStatus.active;
 
   Future<void> initialize() async {
-    status = await store.isAvailable()
-        ? BrainStatus.readyToLoad : BrainStatus.readyToDownload;
+    try {
+      status = await store.isAvailable()
+          ? BrainStatus.readyToLoad : BrainStatus.readyToDownload;
+    } catch (e) {
+      status = BrainStatus.unavailable;
+      error = 'No se pudo comprobar el almacenamiento: $e';
+    }
     _notify();
   }
 
