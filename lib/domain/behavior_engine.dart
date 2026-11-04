@@ -154,6 +154,7 @@ class BehaviorEngine {
       emotion: _emotion(personality),
       activity: Activity.observing,
       interests: interests,
+      visitorClaimedToEnclose: state.visitorClaimedToEnclose || claimedImprisonment,
       interactions: state.interactions + 1,
       lastInteractionAt: now,
       memories: [...state.memories, conversation],
