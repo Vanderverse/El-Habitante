@@ -1,5 +1,58 @@
 # El Habitante · prototipo 0.1
 
+## Versión experimental 0.3: inteligencia artificial en el dispositivo
+
+Esta rama agrega una primera integración de Qwen2.5-1.5B-Instruct-GGUF,
+cuantizado Q4_K_M, mediante el plugin Android `llama_flutter_android 0.2.6`
+(licencia MIT, backend llama.cpp). El modelo original se distribuye bajo
+Apache-2.0, publicado por Qwen/Alibaba: 
+https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF
+
+**El archivo GGUF NO está dentro del APK.** La descarga opcional (~1.12 GB)
+solo ocurre después de tocar "Descargar IA". La app descarga el modelo por
+HTTPS desde Hugging Face a su carpeta privada, conserva un archivo parcial
+para reanudar, y comprueba el SHA-256 publicado por el autor antes de cargarlo.
+Se aconseja Wi-Fi, espacio libre suficiente y evitar cerrar la app durante
+la descarga. El botón "Activar IA local" carga el modelo en memoria; se
+puede liberar con "Liberar memoria". No se suben conversaciones ni recuerdos.
+La inferencia funciona sin Internet una vez descargado el archivo.
+
+La configuración de prueba es **ARM64 / Android API 26+**, ejecución
+solo CPU, tres hilos, contexto 1024 tokens y respuestas de máximo 110
+tokens. Está pensada para ser conservadora en el Galaxy A07 de 4 GB, pero
+**no garantiza velocidad ni que Android no cierre el proceso por falta de RAM**.
+La interfaz mantiene el modo de conversación por reglas cuando la IA está
+desactivada o falla.
+
+Memoria: después de cada mensaje se guarda únicamente un resumen de categoría,
+rasgos y una respuesta de la criatura, no la pregunta textual original.
+Afirmaciones sensibles para la historia (por ejemplo, haber encerrado al
+Habitante) se guardan expresamente como afirmaciones no confirmadas. La
+pregunta actual y los recuerdos resumidos se entregan al modelo
+localmente para producir la respuesta, sin servidor. Los modelos
+pueden equivocarse, responder incoherentemente o alucinar.
+
+**Instalación paralela:** v0.3 tiene ID
+`com.vanderverse.elhabitante.preview03` y nombre "El Habitante 0.3".
+No sobrescribe ni importa el progreso de 0.1 o 0.2; conserva esas
+aplicaciones intactas. Los builds debug de GitHub Actions usan
+firmas temporales, por lo que NO se garantiza actualizar APKs debug
+conservando datos entre compilaciones. En futuras versiones
+se necesita una firma de distribución estable y una migración probada.
+
+### Prueba de humo en teléfono
+1. Abrí la 0.3; comprobá que el Habitante contesta con el motor básico.
+2. Tocá "Descargar IA" (preferentemente con Wi-Fi) y comprobá SHA.
+3. Tocá "Activar IA local". Si el modelo no entra en memoria, dejá
+   la app en modo básico y anotá el error.
+4. Con la IA activa preguntá "¿Quién sos?" y "¿Qué hay afuera?".
+5. Decí "Fui yo quien te encerró", y después preguntá
+   "¿Te acordás de lo que dije?" para revisar continuidad.
+6. Activá modo avión y comprobá que todavía genera respuestas.
+7. Liberá memoria de la IA y verificá que el motor básico continúe funcionando.
+
+---
+
 ## Versión 0.2 (vista previa Android)
 
 La rama `feat/el-habitante-v0.2` incluye expresiones y reacciones animadas,
