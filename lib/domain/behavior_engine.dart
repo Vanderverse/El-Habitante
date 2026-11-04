@@ -131,8 +131,8 @@ class BehaviorEngine {
         .replaceAll(RegExp(r'[óòö]'), 'o')
         .replaceAll(RegExp(r'[úùü]'), 'u');
     final claimedImprisonment =
-        RegExp(r'\\b(yo|fui|soy|he sido)\\b').hasMatch(normalized) &&
-        RegExp(r'\\b(encerr|encerrado|encerraste|encierre|encarcel|atrap|cautiv)').hasMatch(normalized);
+        RegExp(r'\b(yo|fui|soy)\b').hasMatch(normalized) &&
+        RegExp(r'\b(encerr\w*|atrap\w*|cautiv\w*)\b').hasMatch(normalized);
     final count = (state.interests[topic] ?? 0) + 1;
     final interests = {...state.interests, topic: count};
     final p = state.personality;
