@@ -102,6 +102,7 @@ class Habitant {
     List<Memory> memories = const [],
     Map<String, int> interests = const {},
     this.lastReply,
+    this.visitorClaimedToEnclose = false,
   }) : memories = List.unmodifiable(memories.takeLast(memoryLimit)),
        interests = Map.unmodifiable(interests);
 
@@ -120,6 +121,8 @@ class Habitant {
   /// Only aggregate counts by predefined topic, never the user's raw messages.
   final Map<String, int> interests;
   final String? lastReply;
+  /// Persists a noteworthy unverified claim independently from recent memories.
+  final bool visitorClaimedToEnclose;
 
   factory Habitant.discover(DateTime now) => Habitant(
     discoveredAt: now.toUtc(),
@@ -145,6 +148,7 @@ class Habitant {
     List<Memory>? memories,
     Map<String, int>? interests,
     String? lastReply,
+    bool? visitorClaimedToEnclose,
   }) => Habitant(
     discoveredAt: discoveredAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -157,6 +161,7 @@ class Habitant {
     memories: memories ?? this.memories,
     interests: interests ?? this.interests,
     lastReply: lastReply ?? this.lastReply,
+    visitorClaimedToEnclose: visitorClaimedToEnclose ?? this.visitorClaimedToEnclose,
   );
 
   Map<String, Object?> toJson() => {
@@ -172,6 +177,7 @@ class Habitant {
     'memories': memories.map((m) => m.toJson()).toList(),
     'interests': interests,
     'lastReply': lastReply,
+    'visitorClaimedToEnclose': visitorClaimedToEnclose,
   };
 
   factory Habitant.fromJson(Map<String, dynamic> json) {
@@ -200,6 +206,7 @@ class Habitant {
       interests: (json['interests'] as Map<String, dynamic>? ?? {})
           .map((key, value) => MapEntry(key, value as int)),
       lastReply: json['lastReply'] as String?,
+      visitorClaimedToEnclose: json['visitorClaimedToEnclose'] as bool? ?? false,
     );
   }
 }
