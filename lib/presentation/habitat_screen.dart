@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../ai/local_brain.dart';
 import '../application/habitat_controller.dart';
 import '../data/habitat_repository.dart';
 import '../domain/behavior_engine.dart';
@@ -19,6 +20,7 @@ class HabitatScreen extends StatefulWidget {
 
 class _HabitatScreenState extends State<HabitatScreen>
     with WidgetsBindingObserver {
+  late final LocalBrain brain;
   late final HabitatController controller;
   late final Timer timer;
   final messageInput = TextEditingController();
@@ -27,7 +29,9 @@ class _HabitatScreenState extends State<HabitatScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    controller = HabitatController(repositoryFactory: widget.repositoryFactory);
+    brain = LocalBrain();
+    controller = HabitatController(repositoryFactory: widget.repositoryFactory, brain: brain);
+    unawaited(brain.initialize());
     unawaited(controller.load());
     timer = Timer.periodic(const Duration(seconds: 30), (_) {
       unawaited(controller.reconcile());
@@ -50,12 +54,13 @@ class _HabitatScreenState extends State<HabitatScreen>
     messageInput.dispose();
     WidgetsBinding.instance.removeObserver(this);
     controller.dispose();
+    brain.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: controller,
+    listenable: Listenable.merge([controller, brain]),
     builder: (context, _) => Scaffold(
       appBar: AppBar(
         title: const Text('El Habitante'),
@@ -153,15 +158,20 @@ class _HabitatScreenState extends State<HabitatScreen>
                 ],
               ),
               const SizedBox(height: 18),
+              _brainPanel(),
+              const SizedBox(height: 18),
               const Text('Hablar con él',
                   style: TextStyle(fontSize: 19, fontWeight: FontWeight.w500)),
               const SizedBox(height: 6),
-              const Text('Probá contarle sobre juegos, música, espacio, animales o el misterio. Todo se interpreta en este celular.'),
+              Text(brain.isActive
+                  ? 'Su mente local está activa. Puede conversar libremente; las respuestas pueden tardar unos segundos.'
+                  : 'Sin modelo cargado, conversa mediante reglas sencillas. Activá su mente local para probar respuestas libres.'),
               const SizedBox(height: 8),
               Row(children: [
                 Expanded(
                   child: TextField(
                     controller: messageInput,
+                    enabled: !controller.isReplying,
                     maxLength: 240,
                     textInputAction: TextInputAction.send,
                     decoration: const InputDecoration(
@@ -175,10 +185,19 @@ class _HabitatScreenState extends State<HabitatScreen>
                 const SizedBox(width: 8),
                 IconButton.filled(
                   tooltip: 'Enviar mensaje local',
-                  onPressed: _sendMessage,
+                  onPressed: controller.isReplying ? null : _sendMessage,
                   icon: const Icon(Icons.send_outlined),
                 ),
               ]),
+              if (controller.isReplying) ...[
+                const SizedBox(height: 8),
+                const Row(children: [
+                  SizedBox(width: 18, height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2)),
+                  SizedBox(width: 10),
+                  Expanded(child: Text('Está pensando una respuesta...')),
+                ]),
+              ],
               if (state.interests.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(_topicSummary(state),
@@ -216,6 +235,90 @@ class _HabitatScreenState extends State<HabitatScreen>
     );
   }
 
+
+  Widget _brainPanel() {
+    final state = brain.status;
+    final busy = state == BrainStatus.downloading ||
+        state == BrainStatus.loading;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Row(children: [
+            Icon(Icons.psychology_outlined),
+            SizedBox(width: 8),
+            Expanded(child: Text('Su mente local',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17))),
+          ]),
+          const SizedBox(height: 8),
+          Text(switch (state) {
+            BrainStatus.unavailable => 'Comprobando almacenamiento...',
+            BrainStatus.readyToDownload =>
+              'IA opcional Qwen2.5 1.5B (1,12 GB). Descarga única con Internet y Wi-Fi recomendado.',
+            BrainStatus.downloading => brain.progress < 0
+              ? 'Descargando modelo...'
+              : 'Descargando: ${(brain.progress * 100).toStringAsFixed(0)} %',
+            BrainStatus.readyToLoad =>
+              'El modelo ya está descargado. Podés cargarlo en memoria.',
+            BrainStatus.loading => 'Cargando el modelo. Puede tardar...',
+            BrainStatus.active =>
+              'IA funcionando en este dispositivo, sin enviar tus mensajes a Internet.',
+            BrainStatus.failed => 'Hubo un problema con la IA local.',
+          }),
+          if (state == BrainStatus.downloading) ...[
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+                value: brain.progress < 0 ? null : brain.progress),
+          ],
+          if (brain.error != null) ...[
+            const SizedBox(height: 8),
+            Text(brain.error!, style: const TextStyle(color: Colors.deepOrange)),
+          ],
+          const SizedBox(height: 10),
+          if (state == BrainStatus.readyToDownload)
+            FilledButton.icon(
+              onPressed: () => unawaited(brain.download()),
+              icon: const Icon(Icons.download_outlined),
+              label: const Text('Descargar IA (aprox. 1,12 GB)'),
+            ),
+          if (state == BrainStatus.downloading)
+            OutlinedButton.icon(
+              onPressed: brain.cancelDownload,
+              icon: const Icon(Icons.stop_circle_outlined),
+              label: const Text('Detener descarga'),
+            ),
+          if (state == BrainStatus.readyToLoad)
+            FilledButton.icon(
+              onPressed: () => unawaited(brain.load()),
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('Activar IA local'),
+            ),
+          if (state == BrainStatus.active)
+            OutlinedButton(
+              onPressed: brain.isResponding
+                  ? null : () => unawaited(brain.unload()),
+              child: const Text('Liberar memoria del teléfono'),
+            ),
+          if (state == BrainStatus.failed)
+            OutlinedButton(
+              onPressed: busy ? null : () => unawaited(_retryBrain()),
+              child: const Text('Reintentar'),
+            ),
+          const Text('El modo básico continúa disponible. Descargá solo con '
+              'espacio suficiente (recomendado: 2 GB libres).',
+              style: TextStyle(fontSize: 12)),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _retryBrain() async {
+    await brain.initialize();
+    if (brain.status == BrainStatus.readyToLoad) {
+      await brain.load();
+    }
+  }
+
   String _topicSummary(Habitant state) {
     final entries = state.interests.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
@@ -225,7 +328,7 @@ class _HabitatScreenState extends State<HabitatScreen>
 
   void _sendMessage() {
     final text = messageInput.text.trim();
-    if (text.isEmpty || controller.state == null || controller.loading) return;
+    if (text.isEmpty || controller.state == null || controller.loading || controller.isReplying) return;
     final last = controller.state!.lastInteractionAt;
     if (last != null &&
         DateTime.now().toUtc().difference(last) <
@@ -240,7 +343,7 @@ class _HabitatScreenState extends State<HabitatScreen>
 
   void _interact(Interaction action) {
     final state = controller.state;
-    if (state == null || controller.loading) return;
+    if (state == null || controller.loading || controller.isReplying) return;
     final last = state.lastInteractionAt;
     if (last != null) {
       final remaining = BehaviorEngine.interactionCooldown -
