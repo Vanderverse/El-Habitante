@@ -159,17 +159,17 @@ class BehaviorEngine {
         .replaceAll(RegExp(r'[óòö]'), 'o')
         .replaceAll(RegExp(r'[úùü]'), 'u');
     if (RegExp(r'\b(misterio|marca|pared|senal|habitacion|origen|transmision)\b')
-        .hasMatch(normalized)) return 'misterio';
+        .hasMatch(normalized)) { return 'misterio'; }
     if (RegExp(r'\b(juego|juegos|videojuego|videojuegos|skyrim|fallout|consola)\b')
-        .hasMatch(normalized)) return 'juegos';
+        .hasMatch(normalized)) { return 'juegos'; }
     if (RegExp(r'\b(musica|cancion|canciones|escuchar|banda|cantar)\b')
-        .hasMatch(normalized)) return 'musica';
+        .hasMatch(normalized)) { return 'musica'; }
     if (RegExp(r'\b(espacio|universo|planeta|planetas|luna|estrella|estrellas)\b')
-        .hasMatch(normalized)) return 'espacio';
+        .hasMatch(normalized)) { return 'espacio'; }
     if (RegExp(r'\b(naturaleza|animal|animales|gato|perro|bosque|mar|arbol)\b')
-        .hasMatch(normalized)) return 'naturaleza';
+        .hasMatch(normalized)) { return 'naturaleza'; }
     if (RegExp(r'\b(hola|buenas|saludo|saludos|chau|buenos dias)\b')
-        .hasMatch(normalized)) return 'saludo';
+        .hasMatch(normalized)) { return 'saludo'; }
     return 'otros';
   }
 
