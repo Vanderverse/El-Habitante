@@ -73,6 +73,27 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('envía mensajes de texto sin conexión y registra solamente temas',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(400, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final repository = MemoryRepository();
+    await tester.pumpWidget(ElHabitanteApp(
+      repositoryFactory: () async => repository,
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    final input = find.byType(TextField);
+    await tester.ensureVisible(input);
+    await tester.enterText(input, 'Me encanta el universo');
+    await tester.tap(find.byTooltip('Enviar mensaje local'));
+    await tester.pump();
+    expect(repository.state?.interests['espacio'], 1);
+    expect(repository.state?.lastReply, contains('universo'));
+    expect(repository.state?.toJson().toString(), isNot(contains('Me encanta')));
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('la habitación admite texto grande y una pantalla angosta',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 640));
