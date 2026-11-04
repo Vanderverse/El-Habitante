@@ -104,6 +104,7 @@ confianza ${state.personality.trust.toStringAsFixed(2)},
 independencia ${state.personality.independence.toStringAsFixed(2)}.
 Estado emocional: $feelings. Tu lugar tiene una marca misteriosa.
 No inventes recuerdos. Dudá de afirmaciones sin pruebas.
+El visitante afirmó haberte encerrado: ${state.visitorClaimedToEnclose ? 'sí, no confirmado' : 'no'}.
 Recuerdos reales más recientes:
 $memories
 Si el visitante dijo haberte encerrado, recordá que es su afirmación,
