@@ -123,19 +123,31 @@ class BehaviorEngine {
     }
 
     final topic = _classify(input);
+    // An unverified claim is remembered as a claim, never as established fact.
+    final normalized = input.toLowerCase()
+        .replaceAll(RegExp(r'[áàä]'), 'a')
+        .replaceAll(RegExp(r'[éèë]'), 'e')
+        .replaceAll(RegExp(r'[íìï]'), 'i')
+        .replaceAll(RegExp(r'[óòö]'), 'o')
+        .replaceAll(RegExp(r'[úùü]'), 'u');
+    final claimedImprisonment =
+        RegExp(r'\\b(yo|fui|soy|he sido)\\b').hasMatch(normalized) &&
+        RegExp(r'\\b(encerr|encerrado|encerraste|encierre|encarcel|atrap|cautiv)').hasMatch(normalized);
     final count = (state.interests[topic] ?? 0) + 1;
     final interests = {...state.interests, topic: count};
     final p = state.personality;
     final personality = p.change(
       curiosity: topic == 'espacio' || topic == 'misterio' ? 0.02 : 0.007,
-      trust: topic == 'saludo' ? 0.018 : 0.009,
+      trust: claimedImprisonment ? -0.055 : topic == 'saludo' ? 0.018 : 0.009,
       sensitivity: topic == 'musica' || topic == 'naturaleza' ? 0.012 : 0,
       independence: topic == 'juegos' ? 0.006 : 0,
     );
     final conversation = Memory(
       kind: MemoryKind.conversation,
       at: now,
-      text: 'Conversamos sobre ${topicNames[topic]}.',
+      text: claimedImprisonment
+          ? 'El visitante afirmó haber encerrado al Habitante. No hay pruebas.'
+          : 'Conversamos sobre ${topicNames[topic]}.',
     );
     state = state.copyWith(
       personality: personality,
