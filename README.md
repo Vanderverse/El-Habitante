@@ -1,5 +1,30 @@
 # El Habitante · prototipo 0.1
 
+## Versión 0.2 (vista previa Android)
+
+La rama `feat/el-habitante-v0.2` incluye expresiones y reacciones animadas,
+una primera conversación de texto **sin IA ni Internet**, intereses aprendidos
+mediante conteos por tema y la segunda señal del misterio.
+
+El usuario puede hablar sobre juegos, música, espacio, naturaleza, saludos y
+el misterio de la habitación. Las respuestas son reglas locales: todavía no se
+comprende lenguaje libre. Se descarta el mensaje introducido, y solamente se
+guardan una categoría, un recuerdo genérico y la respuesta generada.
+
+**Seguridad de los datos:** este APK de prueba tiene el identificador
+`com.vanderverse.elhabitante.preview`, diferente del prototipo 0.1.
+Se instala en paralelo y no puede acceder a los recuerdos de la versión 0.1.
+Nunca desinstales la app original esperando que sus datos pasen automáticamente
+al prototipo. Los builds debug se firman con claves efímeras en CI y no se
+garantizan actualizaciones entre APK de pruebas. No es una distribución final.
+
+El guardado interno continúa con `schemaVersion = 1`, con campos nuevos
+opcionales, de manera que la lógica es compatible con los guardados 0.1
+cuando en el futuro se utilice la misma identidad y firma estable.
+
+---
+
+
 Una criatura digital vive en una pequeña habitación. Sus rasgos, recuerdos y
 decisiones evolucionan localmente. Primera plataforma: **Android 7.0 / API 24 o
 superior**. La interfaz y el motor están escritos en Flutter/Dart y pueden
