@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../ai/local_brain.dart';
 import '../data/habitat_repository.dart';
 import '../domain/behavior_engine.dart';
 import '../domain/habitant.dart';
@@ -9,14 +10,17 @@ class HabitatController extends ChangeNotifier {
     required this.repositoryFactory,
     DateTime Function()? clock,
     this.engine = const BehaviorEngine(),
+    this.brain,
   }) : clock = clock ?? (() => DateTime.now().toUtc());
 
   final Future<HabitatRepository> Function() repositoryFactory;
   final DateTime Function() clock;
   final BehaviorEngine engine;
+  final LocalBrain? brain;
   HabitatRepository? _repository;
   Habitant? state;
   bool loading = true;
+  bool isReplying = false;
   bool _disposed = false;
   String? error;
   Future<void> _writes = Future.value();
@@ -51,12 +55,29 @@ class HabitatController extends ChangeNotifier {
   }
 
   Future<void> converse(String message) async {
-    if (loading || state == null) return;
+    if (loading || state == null || isReplying) return;
     final next = engine.converse(state!, message, clock());
     if (identical(next, state)) return;
     state = next;
     _notify();
     await save();
+
+    final generator = brain;
+    if (generator?.isActive != true) return;
+    isReplying = true;
+    _notify();
+    try {
+      final reply = await generator!.reply(state: next, userMessage: message);
+      // Never overwrite a newer interaction if one occurred during inference.
+      if (!_disposed && identical(state, next) && reply != null) {
+        state = next.copyWith(lastReply: reply);
+        _notify();
+        await save();
+      }
+    } finally {
+      isReplying = false;
+      _notify();
+    }
   }
 
   Future<void> reconcile() async {
