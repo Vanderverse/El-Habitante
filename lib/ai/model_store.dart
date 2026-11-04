@@ -57,7 +57,9 @@ class ModelStore {
           response.headers.value(HttpHeaders.contentRangeHeader)
               ?.startsWith('bytes $existing-') == true;
       if (!isResume) existing = 0;
-      final sink = partial.openWrite(
+      // Await each disk write so the 1.12 GB download never accumulates
+      // large buffers of network data in RAM on 4 GB phones.
+      final writer = await partial.open(
         mode: isResume ? FileMode.append : FileMode.write,
       );
       final total = response.contentLength > 0
@@ -68,7 +70,7 @@ class ModelStore {
       try {
         await for (final chunk in response) {
           if (_cancelled) throw const _Cancelled();
-          sink.add(chunk);
+          await writer.writeFrom(chunk);
           received += chunk.length;
           final percent = total > 0 ? (received * 100 ~/ total) : -1;
           if (percent != previousUpdate) {
@@ -76,9 +78,9 @@ class ModelStore {
             onProgress(total > 0 ? received / total : -1);
           }
         }
-        await sink.flush();
+        await writer.flush();
       } finally {
-        await sink.close();
+        await writer.close();
       }
       if (_cancelled) throw const _Cancelled();
       // Verify a streaming digest instead of loading >1GB into memory.
