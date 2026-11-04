@@ -6,9 +6,9 @@ enum Activity { observing, exploring, resting }
 
 enum Interaction { greet, offerObject, giveSpace, examineMark }
 
-enum MemoryKind { encounter, interaction, activity, mystery }
+enum MemoryKind { encounter, interaction, activity, mystery, conversation }
 
-enum MysteryStage { hidden, appeared, examined }
+enum MysteryStage { hidden, appeared, examined, signal }
 
 /// Rasgos independientes: no existe una puntuación de amistad o felicidad.
 class Personality {
@@ -100,7 +100,10 @@ class Habitant {
     this.interactions = 0,
     this.lastInteractionAt,
     List<Memory> memories = const [],
-  }) : memories = List.unmodifiable(memories.takeLast(memoryLimit));
+    Map<String, int> interests = const {},
+    this.lastReply,
+  }) : memories = List.unmodifiable(memories.takeLast(memoryLimit)),
+       interests = Map.unmodifiable(interests);
 
   static const schemaVersion = 1;
   static const memoryLimit = 100;
@@ -114,6 +117,9 @@ class Habitant {
   final int interactions;
   final DateTime? lastInteractionAt;
   final List<Memory> memories;
+  /// Only aggregate counts by predefined topic, never the user's raw messages.
+  final Map<String, int> interests;
+  final String? lastReply;
 
   factory Habitant.discover(DateTime now) => Habitant(
     discoveredAt: now.toUtc(),
@@ -137,6 +143,8 @@ class Habitant {
     int? interactions,
     DateTime? lastInteractionAt,
     List<Memory>? memories,
+    Map<String, int>? interests,
+    String? lastReply,
   }) => Habitant(
     discoveredAt: discoveredAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -147,6 +155,8 @@ class Habitant {
     interactions: interactions ?? this.interactions,
     lastInteractionAt: lastInteractionAt ?? this.lastInteractionAt,
     memories: memories ?? this.memories,
+    interests: interests ?? this.interests,
+    lastReply: lastReply ?? this.lastReply,
   );
 
   Map<String, Object?> toJson() => {
@@ -160,6 +170,8 @@ class Habitant {
     'interactions': interactions,
     'lastInteractionAt': lastInteractionAt?.toUtc().toIso8601String(),
     'memories': memories.map((m) => m.toJson()).toList(),
+    'interests': interests,
+    'lastReply': lastReply,
   };
 
   factory Habitant.fromJson(Map<String, dynamic> json) {
@@ -184,6 +196,10 @@ class Habitant {
       memories: (json['memories'] as List<dynamic>)
           .map((m) => Memory.fromJson(m as Map<String, dynamic>))
           .toList(),
+      // Defaults preserve every existing save from the 0.1 release.
+      interests: (json['interests'] as Map<String, dynamic>? ?? {})
+          .map((key, value) => MapEntry(key, value as int)),
+      lastReply: json['lastReply'] as String?,
     );
   }
 }
