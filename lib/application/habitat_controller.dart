@@ -50,6 +50,15 @@ class HabitatController extends ChangeNotifier {
     await save();
   }
 
+  Future<void> converse(String message) async {
+    if (loading || state == null) return;
+    final next = engine.converse(state!, message, clock());
+    if (identical(next, state)) return;
+    state = next;
+    _notify();
+    await save();
+  }
+
   Future<void> reconcile() async {
     if (loading || state == null) return;
     final next = engine.advance(state!, clock());
