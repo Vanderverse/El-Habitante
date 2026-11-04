@@ -5,6 +5,7 @@ on:
     branches:
       - ci/build-android-apk
       - feat/el-habitante-v0.2
+      - feat/el-habitante-v0.3-local-ai
   workflow_dispatch:
 
 permissions:
