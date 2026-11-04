@@ -89,7 +89,7 @@ class ModelStore {
         throw const FormatException(
             'La descarga no pasó el control de integridad. Intentá otra vez.');
       }
-      return partial.rename(destination.path);
+      return await partial.rename(destination.path);
     } on _Cancelled {
       throw const FileSystemException(
           'Descarga detenida. Podés reanudarla más adelante.');
