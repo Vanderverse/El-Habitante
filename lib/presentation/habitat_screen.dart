@@ -21,6 +21,7 @@ class _HabitatScreenState extends State<HabitatScreen>
     with WidgetsBindingObserver {
   late final HabitatController controller;
   late final Timer timer;
+  final messageInput = TextEditingController();
 
   @override
   void initState() {
@@ -46,6 +47,7 @@ class _HabitatScreenState extends State<HabitatScreen>
   @override
   void dispose() {
     timer.cancel();
+    messageInput.dispose();
     WidgetsBinding.instance.removeObserver(this);
     controller.dispose();
     super.dispose();
@@ -150,6 +152,38 @@ class _HabitatScreenState extends State<HabitatScreen>
                   ),
                 ],
               ),
+              const SizedBox(height: 18),
+              const Text('Hablar con él',
+                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 6),
+              const Text('Probá contarle sobre juegos, música, espacio, animales o el misterio. Todo se interpreta en este celular.'),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(
+                  child: TextField(
+                    controller: messageInput,
+                    maxLength: 240,
+                    textInputAction: TextInputAction.send,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: '¿Qué le querés contar?',
+                      counterText: '',
+                    ),
+                    onSubmitted: (_) => _sendMessage(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  tooltip: 'Enviar mensaje local',
+                  onPressed: _sendMessage,
+                  icon: const Icon(Icons.send_outlined),
+                ),
+              ]),
+              if (state.interests.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(_topicSummary(state),
+                    style: Theme.of(context).textTheme.bodySmall),
+              ],
               const SizedBox(height: 16),
               const Text(
                 'Tocá a la criatura o dejale algo. Dale unos segundos entre '
@@ -180,6 +214,28 @@ class _HabitatScreenState extends State<HabitatScreen>
         ),
       ),
     );
+  }
+
+  String _topicSummary(Habitant state) {
+    final entries = state.interests.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final topic = entries.first.key;
+    return 'Recuerda que hablaron varias veces sobre ${BehaviorEngine.topicNames[topic] ?? 'otras cosas'}.';
+  }
+
+  void _sendMessage() {
+    final text = messageInput.text.trim();
+    if (text.isEmpty || controller.state == null || controller.loading) return;
+    final last = controller.state!.lastInteractionAt;
+    if (last != null &&
+        DateTime.now().toUtc().difference(last) <
+            BehaviorEngine.interactionCooldown) {
+      _showInteractionFeedback('Dale un instante antes de volver a hablarle.');
+      return;
+    }
+    messageInput.clear();
+    FocusScope.of(context).unfocus();
+    unawaited(controller.converse(text));
   }
 
   void _interact(Interaction action) {
@@ -257,6 +313,14 @@ class _HabitatScreenState extends State<HabitatScreen>
                 Text('Independencia: ${_trait(p.independence)}'),
                 Text('Sensibilidad: ${_trait(p.sensitivity)}'),
                 const Divider(height: 32),
+                if (state.interests.isNotEmpty) ...[
+                  const Text('Intereses que está descubriendo',
+                      style: TextStyle(fontSize: 18)),
+                  for (final entry in (state.interests.entries.toList()
+                        ..sort((a, b) => b.value.compareTo(a.value))))
+                    Text('${BehaviorEngine.topicNames[entry.key] ?? entry.key}: ${entry.value} conversaciones'),
+                  const Divider(height: 32),
+                ],
                 const Text('Recuerdos', style: TextStyle(fontSize: 20)),
                 for (final memory in state.memories.reversed)
                   ListTile(
