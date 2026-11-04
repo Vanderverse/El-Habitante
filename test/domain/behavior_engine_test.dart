@@ -164,10 +164,13 @@ void main() {
     expect(next.memories.last.text,
         'El visitante afirmó haber encerrado al Habitante. No hay pruebas.');
     expect(next.personality.trust, lessThan(initial.personality.trust));
+    expect(next.visitorClaimedToEnclose, isTrue);
     final saved = jsonEncode(next.toJson());
     expect(saved, isNot(contains('Fui yo quien')));
     expect(Habitant.fromJson(jsonDecode(saved) as Map<String, dynamic>)
         .memories.last.text, contains('afirmó'));
+    expect(Habitant.fromJson(jsonDecode(saved) as Map<String, dynamic>)
+        .visitorClaimedToEnclose, isTrue);
   });
 
   test('los guardados de 0.1 se abren sin perder personalidad ni recuerdos', () {
@@ -177,6 +180,7 @@ void main() {
     final recovered = Habitant.fromJson(
         jsonDecode(jsonEncode(old)) as Map<String, dynamic>);
     expect(recovered.interests, isEmpty);
+    expect(recovered.visitorClaimedToEnclose, isFalse);
     expect(recovered.lastReply, isNull);
     expect(recovered.memories, hasLength(1));
     expect(recovered.personality.toJson(), Habitant.discover(start).personality.toJson());
