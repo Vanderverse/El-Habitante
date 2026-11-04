@@ -21,11 +21,24 @@ class RoomView extends StatefulWidget {
 }
 
 class _RoomViewState extends State<RoomView>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController animation = AnimationController(
     vsync: this,
     duration: const Duration(seconds: 3),
   );
+  late final AnimationController reaction = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 650),
+  );
+
+  @override
+  void didUpdateWidget(covariant RoomView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.state.interactions != widget.state.interactions &&
+        !MediaQuery.disableAnimationsOf(context)) {
+      reaction.forward(from: 0);
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -33,6 +46,8 @@ class _RoomViewState extends State<RoomView>
     if (MediaQuery.disableAnimationsOf(context)) {
       animation.stop();
       animation.value = 0;
+      reaction.stop();
+      reaction.value = 0;
     } else {
       animation.repeat();
     }
@@ -41,6 +56,7 @@ class _RoomViewState extends State<RoomView>
   @override
   void dispose() {
     animation.dispose();
+    reaction.dispose();
     super.dispose();
   }
 
@@ -71,19 +87,21 @@ class _RoomViewState extends State<RoomView>
               ),
             ),
           AnimatedBuilder(
-            animation: animation,
+            animation: Listenable.merge([animation, reaction]),
             builder: (context, _) {
               final phase = animation.value * math.pi * 2;
               final exploring = widget.state.activity == Activity.exploring;
+              final response = math.sin(reaction.value * math.pi).abs();
               return Align(
                 alignment: Alignment(
                   exploring ? math.sin(phase) * 0.35 : -0.08,
-                  0.45 + math.sin(phase) * 0.035,
+                  0.45 + math.sin(phase) * 0.035 - response * 0.16,
                 ),
                 child: Semantics(
                   label: 'Criatura. Tocar para saludar',
                   button: true,
                   child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: widget.onCreatureTap,
                     child: SizedBox(
                       width: 110,
@@ -93,6 +111,7 @@ class _RoomViewState extends State<RoomView>
                           phase: phase,
                           emotion: widget.state.emotion,
                           resting: widget.state.activity == Activity.resting,
+                          response: response,
                         ),
                       ),
                     ),
@@ -151,18 +170,21 @@ class _CreaturePainter extends CustomPainter {
     required this.phase,
     required this.emotion,
     required this.resting,
+    required this.response,
   });
 
   final double phase;
   final Emotion emotion;
   final bool resting;
+  final double response;
 
   @override
   void paint(Canvas canvas, Size size) {
     final breath = 1 + math.sin(phase) * 0.025;
     canvas.save();
     canvas.translate(size.width / 2, size.height * 0.54);
-    canvas.scale(breath, resting ? 0.83 : 1 / breath);
+    canvas.scale(breath + response * 0.08,
+        resting ? 0.83 : 1 / breath + response * 0.07);
     final body = Paint()..color = emotion == Emotion.curious
         ? const Color(0xffd5c497)
         : const Color(0xffb3c5ac);
@@ -186,12 +208,24 @@ class _CreaturePainter extends CustomPainter {
             width: 8, height: emotion == Emotion.cautious ? 9 : 13), eyes);
       }
     }
-    canvas.drawLine(const Offset(-3, 18), const Offset(3, 18), eyes);
+    if (emotion == Emotion.calm || response > 0.2) {
+      final smile = Path()
+        ..moveTo(-6, 17)
+        ..quadraticBezierTo(0, 24 + response * 4, 7, 17);
+      canvas.drawPath(smile, eyes..style = PaintingStyle.stroke);
+    } else if (emotion == Emotion.cautious || emotion == Emotion.reserved) {
+      canvas.drawLine(const Offset(-4, 19), const Offset(4, 19), eyes);
+    } else {
+      canvas.drawOval(
+        Rect.fromCenter(center: const Offset(0, 19), width: 5, height: 7),
+        eyes,
+      );
+    }
     canvas.restore();
   }
 
   @override
   bool shouldRepaint(_CreaturePainter oldDelegate) =>
       phase != oldDelegate.phase || emotion != oldDelegate.emotion ||
-      resting != oldDelegate.resting;
+      resting != oldDelegate.resting || response != oldDelegate.response;
 }
