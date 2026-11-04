@@ -41,11 +41,16 @@ jobs:
         shell: bash
         run: |
           if [[ ! -f android/gradlew || ! -f android/gradle/wrapper/gradle-wrapper.jar ]]; then
-            echo "Android Gradle wrapper is missing; generating platform files without overwriting existing files."
-            flutter create --platforms=android --project-name=el_habitante .
+            echo "Generating missing Gradle wrapper in a disposable Flutter project."
+            flutter create --platforms=android --project-name=el_habitante "$RUNNER_TEMP/gradle-wrapper-template"
+            cp "$RUNNER_TEMP/gradle-wrapper-template/android/gradlew" android/gradlew
+            cp "$RUNNER_TEMP/gradle-wrapper-template/android/gradle/wrapper/gradle-wrapper.jar" android/gradle/wrapper/gradle-wrapper.jar
+            chmod +x android/gradlew
           fi
           test -f android/gradlew
           test -f android/gradle/wrapper/gradle-wrapper.jar
+          grep -q 'minSdk = 26' android/app/build.gradle.kts
+          grep -q 'com.vanderverse.elhabitante.preview03' android/app/build.gradle.kts
 
       - name: Resolve dependencies
         run: flutter pub get
