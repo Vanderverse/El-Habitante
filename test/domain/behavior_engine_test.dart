@@ -131,6 +131,63 @@ void main() {
         contains('silencio'));
   });
 
+  test('conversa sobre temas conocidos y nunca guarda el mensaje literal', () {
+    final initial = Habitant.discover(start);
+    final next = engine.converse(
+        initial, 'Mi contraseña de skyrim es SECRET123', start);
+    expect(next.interests['juegos'], 1);
+    expect(next.personality.trust, greaterThan(initial.personality.trust));
+    expect(next.memories.last.kind, MemoryKind.conversation);
+    expect(next.memories.last.text, 'Conversamos sobre videojuegos.');
+    expect(engine.dialogue(next), contains('juegos'));
+    expect(jsonEncode(next.toJson()), isNot(contains('SECRET123')));
+  });
+
+  test('las conversaciones repetidas refuerzan un interés, respetando la pausa', () {
+    var state = Habitant.discover(start);
+    state = engine.converse(state, 'Me gusta la música', start);
+    final unchanged = engine.converse(
+        state, 'Otra canción', start.add(const Duration(seconds: 1)));
+    expect(identical(unchanged, state), isTrue);
+    state = engine.converse(
+        state, 'Otra canción', start.add(const Duration(seconds: 4)));
+    state = engine.converse(
+        state, 'Quiero cantar', start.add(const Duration(seconds: 8)));
+    expect(state.interests['musica'], 3);
+    expect(engine.dialogue(state), contains('varias veces'));
+  });
+
+  test('los guardados de 0.1 se abren sin perder personalidad ni recuerdos', () {
+    final old = Habitant.discover(start).toJson()
+      ..remove('interests')
+      ..remove('lastReply');
+    final recovered = Habitant.fromJson(
+        jsonDecode(jsonEncode(old)) as Map<String, dynamic>);
+    expect(recovered.interests, isEmpty);
+    expect(recovered.lastReply, isNull);
+    expect(recovered.memories, hasLength(1));
+    expect(recovered.personality.toJson(), Habitant.discover(start).personality.toJson());
+  });
+
+  test('el misterio avanza cuando conversa sobre la marca examinada', () {
+    var state = Habitant.discover(start);
+    for (var i = 0; i < 4; i++) {
+      state = engine.interact(
+          state, Interaction.greet, start.add(Duration(seconds: i * 4)));
+    }
+    state = engine.interact(
+        state, Interaction.examineMark, start.add(const Duration(seconds: 16)));
+    expect(state.mystery, MysteryStage.examined);
+    state = engine.converse(
+        state, '¿Qué es esa marca?', start.add(const Duration(seconds: 20)));
+    expect(state.mystery, MysteryStage.signal);
+    expect(engine.dialogue(state), contains('NO ESTÁS SOLO'));
+    expect(state.memories.where((m) => m.kind == MemoryKind.mystery), hasLength(3));
+    final again = engine.converse(
+        state, '¿Hay otra señal?', start.add(const Duration(seconds: 24)));
+    expect(again.memories.where((m) => m.kind == MemoryKind.mystery), hasLength(3));
+  });
+
   test('los recuerdos están acotados y conservan los más recientes', () {
     final state = Habitant.discover(start).copyWith(
       memories: List.generate(200, (i) => Memory(
