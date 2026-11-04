@@ -79,8 +79,8 @@ cuando en el futuro se utilice la misma identidad y firma estable.
 
 
 Una criatura digital vive en una pequeña habitación. Sus rasgos, recuerdos y
-decisiones evolucionan localmente. Primera plataforma: **Android 7.0 / API 24 o
-superior**. La interfaz y el motor están escritos en Flutter/Dart y pueden
+decisiones evolucionan localmente. Primera plataforma original: **Android 7.0 / API 24 o
+superior**. La rama experimental 0.3 necesita **Android API 26+ y ARM64**. La interfaz y el motor están escritos en Flutter/Dart y pueden
 reutilizarse en iOS más adelante; todavía no se agregó el proyecto nativo iOS.
 
 ## Qué incluye
@@ -99,11 +99,11 @@ reutilizarse en iOS más adelante; todavía no se agregó el proyecto nativo iOS
 - JSON versionado en el directorio privado de la app, con sustitución atómica,
   errores visibles y un máximo de cien recuerdos recientes.
 
-No usa cuentas, IA externa, reconocimiento de voz, permisos de micrófono ni
-servicios de red de la aplicación. Android tiene desactivados los backups
-automáticos y las reglas de transferencia de datos. Los permisos `INTERNET` de
-las variantes debug/profile son para las herramientas de desarrollo de Flutter;
-el manifiesto principal no solicita permisos. Desinstalar o borrar los datos
+El prototipo 0.1 no usa cuentas, IA externa, reconocimiento de voz ni permisos
+de micrófono. **En la 0.3 se añade únicamente permiso INTERNET para descargar
+el GGUF a petición del usuario; las conversaciones se procesan localmente.**
+Android tiene desactivados los backups automáticos y las reglas de
+transferencia de datos. Desinstalar o borrar los datos
 elimina los recuerdos; no hay sincronización ni recuperación remota.
 
 ## Viabilidad y estructura
