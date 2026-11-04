@@ -1,0 +1,66 @@
+name: Build El Habitante APK
+
+on:
+  push:
+    branches:
+      - ci/build-android-apk
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-debug:
+    name: Validate and build Android debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install Flutter 3.47.9
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.9'
+          cache: true
+
+      - name: Show Flutter version
+        run: flutter --version
+
+      - name: Restore missing Android Gradle wrapper if necessary
+        shell: bash
+        run: |
+          if [[ ! -f android/gradlew || ! -f android/gradle/wrapper/gradle-wrapper.jar ]]; then
+            echo "Android Gradle wrapper is missing; generating platform files without overwriting existing files."
+            flutter create --platforms=android --project-name=el_habitante .
+          fi
+          test -f android/gradlew
+          test -f android/gradle/wrapper/gradle-wrapper.jar
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Analyze Dart and Flutter code
+        run: flutter analyze
+
+      - name: Run automated tests
+        run: flutter test
+
+      - name: Build Android debug APK
+        run: flutter build apk --debug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: el-habitante-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
