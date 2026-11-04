@@ -46,6 +46,33 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('un toque breve responde y otro durante la pausa recibe aviso',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(400, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final repository = MemoryRepository();
+    await tester.pumpWidget(
+      ElHabitanteApp(repositoryFactory: () async => repository),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.ensureVisible(find.text('Saludar'));
+    await tester.tap(find.text('Saludar'));
+    await tester.pump();
+    expect(repository.state!.interactions, 1);
+    expect(find.text('Te acercaste a saludarlo.'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Dejar una piedra'));
+    await tester.tap(find.text('Dejar una piedra'));
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(repository.state!.interactions, 1);
+    expect(
+      find.text('Dale un instante para responder antes del próximo gesto.'),
+      findsOneWidget,
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('la habitación admite texto grande y una pantalla angosta',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 640));
