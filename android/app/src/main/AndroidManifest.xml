@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Internet is only used to download the optional GGUF model. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
-        android:label="El Habitante 0.2"
+        android:label="El Habitante 0.3"
         android:allowBackup="false"
         android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
