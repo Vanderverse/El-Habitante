@@ -16,6 +16,11 @@ class LocalBrain extends ChangeNotifier {
   double progress = 0;
   String? error;
   bool isResponding = false;
+  String partialReply = '';
+  Duration? lastGenerationDuration;
+  Duration? lastFirstTokenDuration;
+  // Hasta dos intercambios temporales; las frases literales no se guardan.
+  final List<ChatMessage> _recentTurns = [];
   bool _disposed = false;
 
   bool get isActive => status == BrainStatus.active;
@@ -89,53 +94,77 @@ class LocalBrain extends ChangeNotifier {
     final llama = _llama;
     if (llama == null || !isActive || isResponding) return null;
     isResponding = true;
+    partialReply = '';
+    error = null;
     _notify();
+    final watch = Stopwatch()..start();
     try {
-      // Only short summaries of older events go into this prompt. The current
-      // user message exists in memory only for the duration of this request.
-      final memories = state.memories.reversed.take(6).toList().reversed
-          .map((entry) => '- ${entry.text}').join('\n');
-      final feelings = state.emotion.name;
-      final system = '''
-Sos El Habitante, criatura de una habitación enigmática. No sos un asistente.
-Respondé en español natural y breve (1 a 3 frases). No ofrezcas servicios.
-Tenés curiosidad ${state.personality.curiosity.toStringAsFixed(2)},
-confianza ${state.personality.trust.toStringAsFixed(2)},
-independencia ${state.personality.independence.toStringAsFixed(2)}.
-Estado emocional: $feelings. Tu lugar tiene una marca misteriosa.
-No inventes recuerdos. Dudá de afirmaciones sin pruebas.
-El visitante afirmó haberte encerrado: ${state.visitorClaimedToEnclose ? 'sí, no confirmado' : 'no'}.
-Recuerdos reales más recientes:
-$memories
-Si el visitante dijo haberte encerrado, recordá que es su afirmación,
-no un hecho comprobado. Respondé a lo último que te pregunta.
-''';
+      // Un contexto acotado evita arrastrar conversaciones y consumir la
+      // memoria KV del teléfono. Los recuerdos se reconstruyen en el prompt.
+      await llama.clearContext();
       final tokens = llama.generateChat(
         messages: [
-          ChatMessage(role: 'system', content: system),
+          ChatMessage(role: 'system', content: buildHabitantPrompt(state)),
+          ..._recentTurns,
           ChatMessage(role: 'user', content: userMessage),
         ],
         template: 'chatml',
-        maxTokens: 110,
+        // El límite anterior, 110, podía interrumpir frases inconclusas.
+        maxTokens: 160,
         temperature: 0.65,
         topP: 0.9,
       );
-      final reply = (await tokens.join().timeout(
-        const Duration(seconds: 90),
-      )).trim();
-      return reply.isEmpty ? null : reply;
+      Future<String> collect() async {
+        final output = StringBuffer();
+        var lastUpdate = DateTime.fromMillisecondsSinceEpoch(0);
+        var reportedLength = 0;
+        var first = true;
+        await for (final chunk in tokens) {
+          if (first) {
+            first = false;
+            lastFirstTokenDuration = watch.elapsed;
+          }
+          output.write(chunk);
+          final now = DateTime.now();
+          if (output.length - reportedLength >= 12 ||
+              now.difference(lastUpdate) >=
+                  const Duration(milliseconds: 280)) {
+            partialReply = output.toString();
+            reportedLength = output.length;
+            lastUpdate = now;
+            _notify();
+          }
+        }
+        return output.toString().trim();
+      }
+
+      final result = await collect().timeout(const Duration(seconds: 105));
+      if (result.isEmpty) return null;
+      _recentTurns.add(ChatMessage(role: 'user', content: userMessage));
+      _recentTurns.add(ChatMessage(role: 'assistant', content: result));
+      while (_recentTurns.length > 4) {
+        _recentTurns.removeRange(0, 2);
+      }
+      return result;
     } catch (e) {
-      error = 'La IA no pudo responder. Se usó el modo básico: $e';
+      error = 'La IA no pudo terminar la respuesta; modo básico: $e';
       _notify();
-      try { await llama.stop(); } catch (_) {}
+      try {
+        await llama.stop();
+      } catch (_) {}
       return null;
     } finally {
+      watch.stop();
+      lastGenerationDuration = watch.elapsed;
+      partialReply = '';
       isResponding = false;
       _notify();
     }
   }
 
   Future<void> unload() async {
+    _recentTurns.clear();
+    partialReply = '';
     final llama = _llama;
     _llama = null;
     if (llama != null) await llama.dispose();
@@ -157,4 +186,33 @@ no un hecho comprobado. Respondé a lo último que te pregunta.
     _llama?.dispose();
     super.dispose();
   }
+}
+
+/// Prompt corto para reducir el procesamiento inicial en CPUs modestos.
+@visibleForTesting
+String buildHabitantPrompt(Habitant state) {
+  final recentMemories = state.memories.reversed
+      .take(3)
+      .map((memory) => memory.text)
+      .join(' | ');
+  final mood = switch (state.emotion) {
+    Emotion.curious => 'curioso',
+    Emotion.calm => 'sereno',
+    Emotion.cautious => 'cauteloso',
+    Emotion.reserved => 'reservado',
+  };
+  final claim = state.visitorClaimedToEnclose
+      ? 'El visitante dijo haberte encerrado. Es una afirmación sin pruebas.'
+      : 'Desconocés el origen de la habitación.';
+  final trust = state.personality.trust.toStringAsFixed(1);
+  return '''
+Sos El Habitante, una criatura viva que habita una habitación misteriosa.
+Hablá en español natural, en primera persona y desde tus propias experiencias.
+Respondé directamente y en una o dos frases cortas y completas.
+Mostrá emociones, opiniones y dudas. Evitá explicaciones sobre tu identidad artificial.
+Si te preguntan quién sos, contá qué hacés y sentís en tu habitación.
+Ánimo: $mood. Confianza en el visitante (de 0 a 1): $trust.
+$claim
+Recuerdos: $recentMemories
+''';
 }
