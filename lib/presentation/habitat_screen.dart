@@ -311,13 +311,14 @@ class _HabitatScreenState extends State<HabitatScreen>
           if (brain.lastGenerationDuration != null) ...[
             const SizedBox(height: 8),
             Text(
-              'Última respuesta: ' +
-                  brain.lastGenerationDuration!.inSeconds.toString() +
-                  ' s · primer texto: ' +
-                  (brain.lastFirstTokenDuration?.inSeconds.toString() ?? '?') +
-                  ' s',
+              'Última respuesta: ${brain.lastGenerationDuration!.inSeconds} s',
               style: const TextStyle(fontSize: 12),
             ),
+            if (brain.lastFirstTokenDuration != null)
+              Text(
+                'Primer texto: ${brain.lastFirstTokenDuration!.inSeconds} s',
+                style: const TextStyle(fontSize: 12),
+              ),
           ],
           const Text('El modo básico continúa disponible. Descargá solo con '
               'espacio suficiente (recomendado: 2 GB libres).',
