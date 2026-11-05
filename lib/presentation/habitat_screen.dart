@@ -128,7 +128,11 @@ class _HabitatScreenState extends State<HabitatScreen>
                   child: Padding(
                     padding: const EdgeInsets.all(20),
                     child: Text(
-                      controller.engine.dialogue(state),
+                      brain.isResponding
+                          ? (brain.partialReply.trim().isEmpty
+                              ? 'Está pensando…'
+                              : brain.partialReply.trim())
+                          : controller.engine.dialogue(state),
                       style: const TextStyle(fontSize: 18, height: 1.4),
                     ),
                   ),
@@ -195,7 +199,7 @@ class _HabitatScreenState extends State<HabitatScreen>
                   SizedBox(width: 18, height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2)),
                   SizedBox(width: 10),
-                  Expanded(child: Text('Está pensando una respuesta...')),
+                  Expanded(child: Text('Está escribiendo su respuesta...')),
                 ]),
               ],
               if (state.interests.isNotEmpty) ...[
@@ -304,6 +308,17 @@ class _HabitatScreenState extends State<HabitatScreen>
               onPressed: busy ? null : () => unawaited(_retryBrain()),
               child: const Text('Reintentar'),
             ),
+          if (brain.lastGenerationDuration != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Última respuesta: ' +
+                  brain.lastGenerationDuration!.inSeconds.toString() +
+                  ' s · primer texto: ' +
+                  (brain.lastFirstTokenDuration?.inSeconds.toString() ?? '?') +
+                  ' s',
+              style: const TextStyle(fontSize: 12),
+            ),
+          ],
           const Text('El modo básico continúa disponible. Descargá solo con '
               'espacio suficiente (recomendado: 2 GB libres).',
               style: TextStyle(fontSize: 12)),
