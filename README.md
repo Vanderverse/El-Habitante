@@ -1,5 +1,36 @@
 # El Habitante · prototipo 0.1
 
+## 0.3.1: respuestas, coherencia y consecuencias
+
+En esta revisión experimental:
+- **Respuestas progresivas:** el texto aparece conforme llega cada fragmento
+  del modelo, en vez de mostrarlo todo después de terminar. La velocidad real
+  del procesador no cambia por mostrar antes el texto.
+- **Frases completas:** límite de 160 tokens frente a los 110 anteriores,
+  con instrucciones más breves para que Qwen responda en una o dos frases.
+  En casos difíciles puede seguir cortándose o equivocándose.
+- **Conversación reciente:** se envían al modelo los dos últimos pares de
+  mensajes en RAM, además de recuerdos resumidos. Esos mensajes literales
+  se descartan cuando se descarga la IA, sin persistir las preguntas en disco.
+- **Rendimiento comprobable:** el panel muestra la duración total y el
+  tiempo aproximado hasta el primer fragmento de la última respuesta.
+- **Recuerdos cuidadosos:** una pregunta como "¿Fui yo quien te encerró?"
+  o una negación no se tratan como confesión.
+- **Diseño sin botón de reinicio:** no se ofrece restablecimiento a gusto del
+  usuario. El Habitante conserva las consecuencias y la personalidad que
+  desarrolla. "Liberar memoria del teléfono" solo descarga el modelo.
+- No se borra ni reemplaza automáticamente el GGUF al actualizar la app,
+  **pero** las versiones debug de GitHub Actions pueden tener firmas
+  diferentes. Si Android exige desinstalar para instalar un nuevo APK,
+  Android eliminará los datos privados y también el GGUF. No desinstalar
+  una versión instalada sin tener en cuenta este riesgo.
+
+La app mantiene el ID de paquete `com.vanderverse.elhabitante.preview03` y se
+identifica como El Habitante 0.3.1. No se han probado aún la velocidad
+ni la continuidad conversacional de esta revisión en un dispositivo físico.
+
+---
+
 ## Versión experimental 0.3: inteligencia artificial en el dispositivo
 
 Esta rama agrega una primera integración de Qwen2.5-1.5B-Instruct-GGUF,
