@@ -95,6 +95,8 @@ class LocalBrain extends ChangeNotifier {
     if (llama == null || !isActive || isResponding) return null;
     isResponding = true;
     partialReply = '';
+    lastGenerationDuration = null;
+    lastFirstTokenDuration = null;
     error = null;
     _notify();
     final watch = Stopwatch()..start();
