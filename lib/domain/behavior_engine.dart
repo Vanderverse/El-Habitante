@@ -130,7 +130,12 @@ class BehaviorEngine {
         .replaceAll(RegExp(r'[íìï]'), 'i')
         .replaceAll(RegExp(r'[óòö]'), 'o')
         .replaceAll(RegExp(r'[úùü]'), 'u');
-    final claimedImprisonment =
+    // Una pregunta o una negación no deben convertirse en una confesión.
+    final isQuestion = input.contains('?') || input.contains('¿');
+    final deniesImprisonment = RegExp(
+      r'\b(no|nunca)\b.{0,35}\b(encerr\w*|atrap\w*|cautiv\w*)\b',
+    ).hasMatch(normalized);
+    final claimedImprisonment = !isQuestion && !deniesImprisonment &&
         RegExp(r'\b(yo|fui|soy)\b').hasMatch(normalized) &&
         RegExp(r'\b(encerr\w*|atrap\w*|cautiv\w*)\b').hasMatch(normalized);
     final count = (state.interests[topic] ?? 0) + 1;
